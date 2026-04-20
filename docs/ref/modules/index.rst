@@ -12,4 +12,5 @@ _________________
     vault
     vault_db
     vault_pki
+    vault_pki_digicert
     vault_ssh
