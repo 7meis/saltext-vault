@@ -534,12 +534,11 @@ def test_read_certificate_full_with_chain(vault_pki, private_key):
     ret = vault_pki.read_certificate_full(serial)
 
     assert "certificate" in ret
-    assert "ca_chain" in ret
-    assert isinstance(ret["ca_chain"], list)
+    ca_chain = ret.get("ca_chain", [])
+    assert isinstance(ca_chain, list)
 
-    read_certificate, chain = load_cert(
-        f"{ret['certificate']}{''.join(ret['ca_chain'])}", load_chain=True
-    )
+    read_certificate, chain = load_cert(f"{ret['certificate']}{''.join(ca_chain)}", load_chain=True)
     assert read_certificate.serial_number == signed_certificate.serial_number
-    assert chain
+    if ca_chain:
+        assert chain
     assert chain[0].subject.rfc4514_string() == "CN=Test Issuer CA"

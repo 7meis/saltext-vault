@@ -808,10 +808,23 @@ def read_certificate_full(serial, mount="pki"):
     endpoint = f"{mount}/cert/{serial}"
 
     try:
-        return vault.query("GET", endpoint, __opts__, __context__)["data"]
-
+        data = vault.query("GET", endpoint, __opts__, __context__)["data"]
     except vault.VaultException as err:
         raise CommandExecutionError(f"{err.__class__}: {err}") from err
+
+    # Vault versions prior to 1.16 do not return ``ca_chain`` from
+    # ``/pki/cert/<serial>``. Back-fill it from the issuer endpoint so the
+    # response shape is consistent across supported Vault/OpenBao releases.
+    if "certificate" in data and "ca_chain" not in data:
+        issuer_ref = data.get("issuer_id") or "default"
+        try:
+            issuer_data = read_issuer(ref=issuer_ref, mount=mount)
+        except CommandExecutionError:
+            issuer_data = None
+        if issuer_data and issuer_data.get("ca_chain"):
+            data["ca_chain"] = issuer_data["ca_chain"]
+
+    return data
 
 
 def issue_certificate(

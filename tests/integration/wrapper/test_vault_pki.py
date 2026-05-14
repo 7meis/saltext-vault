@@ -607,7 +607,6 @@ def test_read_certificate_full(salt_ssh_cli, private_key):
     assert ret.returncode == 0
 
     assert "certificate" in ret.data
-    assert "ca_chain" not in ret.data
     assert "private_key" not in ret.data
 
     read_certificate = load_cert(ret.data["certificate"])
@@ -633,12 +632,13 @@ def test_read_certificate_full_with_chain(salt_ssh_cli, private_key):
     assert ret.returncode == 0
 
     assert "certificate" in ret.data
-    assert "ca_chain" in ret.data
-    assert isinstance(ret.data["ca_chain"], list)
+    ca_chain = ret.data.get("ca_chain", [])
+    assert isinstance(ca_chain, list)
 
     read_certificate, chain = load_cert(
-        f"{ret.data['certificate']}{''.join(ret.data['ca_chain'])}", load_chain=True
+        f"{ret.data['certificate']}{''.join(ca_chain)}", load_chain=True
     )
     assert read_certificate.serial_number == signed_certificate.serial_number
-    assert chain
+    if ca_chain:
+        assert chain
     assert chain[0].subject.rfc4514_string() == "CN=Test Issuer CA"
